@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>لعبة جدول الضرب - المهندسة منال أبو محسن</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  margin:0; padding:0;
+  overflow-x:hidden;
+  background-image: url('https://cdn.pixabay.com/photo/2017/03/28/12/09/education-2187477_1280.png'); /* خلفية تعليمية */
+  background-size: cover;
+  background-position: center;
+}
+h1 { color:#ff5722; margin-top:20px; font-size:32px; }
+h2 { color:#555; margin-top:5px; font-size:22px; }
+input { padding:10px; font-size:18px; margin:5px; border-radius:8px; border:1px solid #ccc; width:250px; }
+button {
+  padding:10px 20px;
+  font-size:18px;
+  border:none;
+  border-radius:12px;
+  background:#4caf50;
+  color:white;
+  cursor:pointer;
+  margin:5px;
+}
+#game { margin-top:20px; position:relative; min-height:400px; }
+#score { font-size:20px; margin:10px; }
+.feedback { font-size:18px; margin:10px; }
+#cup { font-size:80px; display:none; margin-top:20px; }
+.balloon {
+  position:absolute;
+  font-size:40px;
+  animation:floatUp 4s linear forwards;
+}
+@keyframes floatUp {
+  0% { transform: translateY(0) scale(1); opacity:1; }
+  100% { transform: translateY(-400px) scale(1.2); opacity:0; }
+}
+</style>
+</head>
+<body>
+
+<h1>🎈 لعبة جدول الضرب للأطفال</h1>
+<h2>تصميم: المهندسة منال أبو محسن</h2>
+
+<div id="nameScreen">
+  <p>اكتب اسمك للبدء:</p>
+  <input type="text" id="playerName" placeholder="مثال: منال">
+  <br>
+  <button onclick="saveName()">ابدأ</button>
+</div>
+
+<div id="tableScreen" style="display:none;">
+  <p>اختر جدول الضرب:</p>
+  <div id="tableButtons"></div>
+</div>
+
+<div id="game" style="display:none;"></div>
+
+<div id="score">⭐ النقاط: 0</div>
+<div id="cup">🏆</div>
+
+<audio id="correct" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg"></audio>
+<audio id="wrong" src="https://actions.google.com/sounds/v1/cartoon/boing.ogg"></audio>
+<audio id="confetti" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+
+<script>
+let playerName = '';
+let currentTable = 1;
+let score = 0;
+let cardIndex = 0;
+let cards = [];
+let tableQueue = [1,2,3,4,5,6,7,8,9,10]; 
+let correctSound = document.getElementById('correct');
+let wrongSound = document.getElementById('wrong');
+let confettiSound = document.getElementById('confetti');
+
+function saveName(){
+  const name = document.getElementById('playerName').value.trim();
+  if(name===''){ alert("الرجاء كتابة اسمك!"); return; }
+  playerName = name;
+  document.getElementById('nameScreen').style.display='none';
+  showTableSelect();
+}
+
+function showTableSelect(){
+  const div = document.getElementById('tableButtons');
+  div.innerHTML='';
+  tableQueue.forEach(t=>{
+    const btn = document.createElement('button');
+    btn.innerText='جدول '+t;
+    btn.onclick=()=>startGame(t);
+    div.appendChild(btn);
+  });
+  document.getElementById('tableScreen').style.display='block';
+}
+
+function startGame(n){
+  currentTable = n;
+  score = 0;
+  cardIndex = 0;
+  cards = [];
+  generateCards();
+  document.getElementById('tableScreen').style.display='none';
+  document.getElementById('game').style.display='block';
+  document.getElementById('score').innerText="⭐ النقاط: "+score;
+  showCard();
+}
+
+function generateCards(){
+  for(let i=1;i<=10;i++){
+    const question = `${i} × ${currentTable}`;
+    const correctSum = Array(i).fill(currentTable).join(' + ');
+    const correctAnswer = i*currentTable;
+    cards.push({question: question, sum: correctSum, answer: correctAnswer});
+  }
+}
+
+function showCard(){
+  const container = document.getElementById('game');
+  container.innerHTML='';
+  if(cardIndex >= cards.length){
+    tableQueue = tableQueue.filter(t=>t!==currentTable); 
+    if(tableQueue.length===0){
+      document.getElementById('cup').style.display='block';
+      container.innerHTML="<h2>🎉 أحسنت يا "+playerName+"! لقد أكملت كل الجداول!</h2>";
+    } else {
+      alert("لقد أكملت جدول "+currentTable+"! اختر جدولًا آخر.");
+      showTableSelect();
+    }
+    return;
+  }
+  const card = cards[cardIndex];
+  container.innerHTML=`
+    <div class="card">
+      <h3>${card.question}</h3>
+      <p>اكتب جملة الجمع التكراري:</p>
+      <input type="text" id="sumInput" placeholder="مثال: 2 + 2 + 2">
+      <p>اكتب الناتج:</p>
+      <input type="number" id="ansInput" placeholder="مثال: 6">
+      <br>
+      <button onclick="checkCard()">تحقق</button>
+      <div class="feedback" id="feedback"></div>
+    </div>
+  `;
+}
+
+function createBalloons(){
+  for(let i=0;i<10;i++){
+    const b = document.createElement('div');
+    b.className='balloon';
+    b.innerText='🎈';
+    b.style.left=Math.random()*90+'%';
+    b.style.fontSize=(20+Math.random()*30)+'px';
+    document.body.appendChild(b);
+    setTimeout(()=>b.remove(),4000);
+  }
+}
+
+function checkCard(){
+  const card = cards[cardIndex];
+  const sumInput = document.getElementById('sumInput').value.replace(/\s+/g,'');
+  const ansInput = Number(document.getElementById('ansInput').value);
+  const feedback = document.getElementById('feedback');
+
+  if(sumInput === card.sum.replace(/\s+/g,'') && ansInput === card.answer){
+    feedback.style.color='green';
+    feedback.innerText="✅ أحسنت يا "+playerName+"!";
+    correctSound.play();
+    confettiSound.play();
+    createBalloons();
+    score += 10;
+    document.getElementById('score').innerText="⭐ النقاط: "+score;
+    cardIndex++;
+    setTimeout(showCard,1000);
+  } else {
+    feedback.style.color='red';
+    feedback.innerText="⚠️ حاول مرة أخرى يا "+playerName+"!";
+    wrongSound.play();
+  }
+}
+</script>
+
+</body>
+</html>
